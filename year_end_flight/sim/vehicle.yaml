@@ -1,0 +1,149 @@
+# Vehicle for the control-feasibility simulation (year_end_flight/README.md, section 5).
+#
+# Part of this is the airframe team's data, the rest is still assumed. Status of each value:
+#   GIVEN    stated by the airframe team (dimensions and eCalc result of 2026-10-08, for a
+#            7 kg vehicle; sketch of 2026-08-04; chat)
+#   DERIVED  computed from GIVEN values, with the assumption named
+#   ASSUMED  placeholder; replace when the airframe team supplies the number
+# Nothing is measured on a built vehicle. eCalc is a calculation, not a bench test.
+# A run that passes with these numbers shows the control concept is workable for a vehicle
+# of this kind. It does not qualify the real vehicle.
+#
+# Frames: body x forward, y left, z up (Gazebo). Lengths in metres from the nominal CG,
+# which is also the point PX4's motor geometry is referred to.
+
+nominal:
+  # --- mass properties -----------------------------------------------------------------
+  mass_kg: 7.0                # GIVEN: the weight the eCalc result is for, taken as all-up
+  ixx_kgm2: 0.48              # ASSUMED; a uniform 1.5 kg, 1.7 m wing alone gives 0.36
+  iyy_kgm2: 0.34              # ASSUMED
+  izz_kgm2: 0.81              # ASSUMED
+  inertia_scale: 1.0          # multiplies all three
+  cg_x_m: 0.0                 # true CG minus the CG PX4 assumes
+  cg_y_m: 0.0
+  cg_z_m: 0.0
+
+  # --- lift motors (4) -----------------------------------------------------------------
+  # GIVEN: the motors sit on a rectangle 665 mm fore-aft by 505 mm across.
+  # ASSUMED: the CG is at the centre of that rectangle.
+  rotor_x_m: 0.3325
+  rotor_y_m: 0.2525
+  lift_thrust_max_n: 32.6     # DERIVED, per motor: eCalc thrust-to-weight 1.9 at 7 kg
+  lift_moment_m: 0.030        # DERIVED reaction torque per newton of thrust: eCalc power and
+                              # speed (311 W, 4305 rpm in hover; 784 W, 6574 rpm at maximum),
+                              # with 82 to 85 % of the electrical power assumed at the shaft
+  lift_tau_up_s: 0.04         # ASSUMED motor time constants
+  lift_tau_down_s: 0.06
+  lift_mismatch_pct: 0.0      # motor 0 gets +p %, motor 1 gets -p % of thrust
+
+  # --- pusher --------------------------------------------------------------------------
+  pusher_thrust_max_n: 25.0   # ASSUMED
+  pusher_moment_m: 0.015      # ASSUMED reaction torque per newton of thrust
+  pusher_x_m: -0.40           # ASSUMED: behind the 0.71 m body (GIVEN), body centred on the CG
+  pusher_y_m: 0.0             # thrust line offset to the left
+  pusher_z_m: 0.0             # thrust line offset above the CG
+
+  # --- wing: NACA 4415, 1700 x 250 mm (GIVEN), 1.5 kg (GIVEN) ---------------------------
+  wing_span_m: 1.70
+  wing_chord_m: 0.25
+  wing_incidence_deg: 0.0     # ASSUMED
+  wing_alpha0_deg: 4.0        # zero-lift angle of NACA 4415 is about -4 deg (textbook value)
+  wing_cla_2d: 6.0            # section lift slope per rad (textbook value)
+  wing_stall_deg: 14.0        # ASSUMED section stall angle
+  wing_cd0: 0.08              # ASSUMED whole-aircraft drag coefficient on the wing area
+  wing_cp_x_m: -0.08          # ASSUMED where the wing lift acts; aft of the CG is negative.
+                              # This one number stands for the wing's pitching moment.
+                              # -0.08: CG at the quarter chord, and 8 cm for the nose-down
+                              # moment of the cambered airfoil (moment coefficient about -0.10).
+  wing_cp_z_m: 0.05           # ASSUMED
+
+  # --- rear plate (GIVEN): a flat plate between the booms, 475 x 150 mm; no fin. ---------
+  # Aerodynamically a small fixed horizontal tail.
+  tail_area_m2: 0.0713        # GIVEN: 0.475 m x 0.150 m
+  tail_arm_m: 0.62            # DERIVED: its trailing edge is 1065 mm behind the front motors
+                              # (GIVEN); quarter chord, CG at the centre of the motors
+  tail_incidence_deg: 0.0     # ASSUMED: in line with the booms
+  tail_cla: 3.5               # lift slope per rad of a flat plate of this aspect ratio
+
+  # --- side area ------------------------------------------------------------------------
+  # The fuselage, booms and pusher still feel a side wind. One side-force surface stands for
+  # them; where it acts decides which way it turns the nose.
+  side_area_m2: 0.15          # DERIVED: side of the 0.71 m x 0.215 m body (GIVEN)
+  side_cla: 1.0               # ASSUMED side-force slope per rad
+  side_cp_x_m: 0.0            # ASSUMED: ahead of the CG (+) turns the nose away from the
+                              # wind, behind it (-) turns the nose into the wind
+
+  # --- environment ---------------------------------------------------------------------
+  air_density: 1.2041         # kg/m^3; scales lift, drag and all thrusts
+  wind_speed_mps: 0.0
+  wind_from_deg: 0.0          # 0 headwind, 90 from the left, 180 tailwind, 270 from the right
+  wind_gust_pct: 0.0          # slow sinusoidal variation of the speed, fraction of the mean
+
+  # --- flight profile ------------------------------------------------------------------
+  alt_m: 20.0
+  cruise_mps: 10.0
+  accel_mps2: 1.0             # limit on the commanded speed change, both ways
+  cruise_s: 15.0
+  hover_s: 6.0
+  heading_into_wind: 0        # 0 command the heading along the direction of travel;
+                              # 1 command it along the velocity relative to the air, which
+                              # needs the wind (the simulation then uses the true mean wind)
+
+# Range of each swept quantity: [low, high]. sweep.py uses these for the one-at-a-time and the
+# random study. Values the airframe team has given are not swept, except the mass.
+sweep:
+  mass_kg: [6.0, 8.0]
+  inertia_scale: [0.6, 1.6]
+  cg_x_m: [-0.04, 0.04]
+  cg_y_m: [-0.02, 0.02]
+  cg_z_m: [-0.03, 0.03]
+  lift_thrust_max_n: [27.5, 37.5]
+  lift_moment_m: [0.020, 0.040]
+  lift_tau_up_s: [0.02, 0.10]
+  lift_mismatch_pct: [0.0, 8.0]
+  pusher_thrust_max_n: [15.0, 40.0]
+  pusher_y_m: [-0.02, 0.02]
+  pusher_z_m: [-0.06, 0.06]
+  wing_incidence_deg: [0.0, 4.0]
+  wing_cd0: [0.04, 0.16]
+  wing_cp_x_m: [-0.14, 0.0]
+  tail_arm_m: [0.52, 0.72]
+  tail_incidence_deg: [-2.0, 2.0]
+  side_area_m2: [0.10, 0.20]
+  side_cp_x_m: [-0.3, 0.4]
+  air_density: [1.10, 1.29]
+  wind_speed_mps: [0.0, 8.0]
+  wind_from_deg: [0.0, 360.0]
+  wind_gust_pct: [0.0, 0.4]
+  cruise_mps: [6.0, 14.0]
+  accel_mps2: [0.5, 2.0]
+
+# PX4 parameters of the control concept (year_end_flight/README.md, section 4). Applied on top
+# of airframe 4004 (standard VTOL). The motor positions are written from the nominal geometry
+# above, never from a swept value: PX4 does not know the true vehicle.
+px4_params:
+  CA_SV_CS_COUNT: 0           # no control surfaces
+  SIM_GZ_SV_FUNC1: 0
+  SIM_GZ_SV_FUNC2: 0
+  SIM_GZ_SV_FUNC3: 0
+  VT_FWD_THRUST_EN: 4         # pusher gives the forward force in multicopter mode, always
+  VT_PITCH_MIN: 0.0           # no nose-down pitch: every forward demand goes to the pusher
+  VT_FWD_THRUST_SC: 2.75      # weight / pusher maximum thrust
+  THR_MDL_FAC: 1.0            # the simulated motors are exactly quadratic
+  CA_R4_SLEW: 1.0             # pusher command takes at least 1 s from 0 to 1
+  CA_ROTOR4_PZ: 0.0           # thrust-line offset is left to the rate integrator
+  MPC_XY_VEL_MAX: 16.0
+  MC_YAWRATE_K: 3.0           # this vehicle turns about 1/3 as hard in yaw per unit of command
+                              # as PX4's standard VTOL model
+  WV_EN: 0
+  # simulation housekeeping: no RC, no ground station
+  COM_RC_IN_MODE: 4
+  COM_RCL_EXCEPT: 4
+  NAV_DLL_ACT: 0
+  NAV_RCL_ACT: 0
+
+sim:
+  px4_root: ~/px4-v1.17.0     # a tree with build/px4_sitl_default already built
+  autostart: 4004
+  speed_factor: 4
+  run_root: /tmp/psi_qp_runs

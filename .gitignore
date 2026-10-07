@@ -41,3 +41,6 @@ mujoco_rl/**/*.pyls
 # Local vision model directory
 ros2/ws/src/drone_vision/models/
 compose.gpu.old.yaml
+
+# year-end flight simulation output
+year_end_flight/sim/out/
